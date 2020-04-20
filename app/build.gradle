@@ -51,6 +51,8 @@ dependencies {
 
     implementation project(path: ':opencv')
 
+    implementation "com.opencsv:opencsv:4.0"
+
     //loomo dependencies
     implementation 'com.segway.robot:visionsdk:0.6.874'
     implementation 'com.segway.robot:speech-sdk:0.5.327'

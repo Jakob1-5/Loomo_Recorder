@@ -120,8 +120,22 @@ object LoomoSensor {
         )
     }
 
-    fun getAllSensors(): RobotAllSensors {
-        return mSensor.robotAllSensors
+//    fun getAllSensors(): RobotAllSensors {
+//        return mSensor.robotAllSensors
+//    }
+
+    fun getAllSensors(): AllSensors {
+        return AllSensors(
+            getSurroundings(),
+            getWheelSpeed(),
+            getHeadPoseWorld(),
+            getHeadPoseJoint(),
+            getSensBaseImu(),
+            getSensBaseTick(),
+//            mSensor.robotAllSensors.basePose.timestamp
+            System.currentTimeMillis()*1000
+        )
     }
+
 
 }

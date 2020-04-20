@@ -2,5 +2,8 @@
     <string name="app_name">Loomo Recorder</string>
 
     <string name="view_finder_description">View finder</string>
+    <string name="stopRecording">Stop recording</string>
+    <string name="startRecording">Start recording</string>
+    <string name="busyRecording">Wait…</string>
 
 </resources>

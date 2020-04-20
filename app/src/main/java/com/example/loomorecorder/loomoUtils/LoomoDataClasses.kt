@@ -95,4 +95,72 @@ package com.example.loomorecorder.loomoUtils
         var width : Int = 0,
         var height : Int = 0
     )
+
+    data class AllSensors(
+        val surroundings :SensSurroundings,
+        val wheelSpeed :SensWheelSpeed,
+        val headPoseWorld :SensHeadPoseWorld,
+        val headPoseJoint :SensHeadPoseJoint,
+        val baseImu :SensBaseImu,
+        val baseTick :SensBaseTick,
+        val timeStamp: Long
+    )
+    {
+        override fun toString(): String {
+            return """
+                All sensors:
+                $surroundings
+                $wheelSpeed
+                $headPoseWorld
+                $headPoseJoint
+                $baseImu
+                $baseTick
+                Timestamp = $timeStamp
+            """.trimIndent()
+        }
+        companion object{
+            fun getStringArrayHeader(): Array<String> {
+                return arrayOf(
+                    "timeStamp",
+                    "surroundings_IR_Left",
+                    "surroundings_IR_Right",
+                    "surroundings_UltraSonic",
+                    "wheelSpeed_SpeedLeft",
+                    "wheelSpeed_SpeedRight",
+                    "headPoseWorld_roll",
+                    "headPoseWorld_pitch",
+                    "headPoseWorld_yaw",
+                    "headPoseJoint_roll",
+                    "headPoseJoint_pitch",
+                    "headPoseJoint_yaw",
+                    "baseImu_roll",
+                    "baseImu_pitch",
+                    "baseImu_yaw",
+                    "baseTick_left",
+                    "baseTick_right"
+                )
+            }
+        }
+        fun toStringArray(): Array<String> {
+            return arrayOf(
+                timeStamp.toString(),
+                surroundings.IR_Left.toString(),
+                surroundings.IR_Right.toString(),
+                surroundings.UltraSonic.toString(),
+                wheelSpeed.SpeedLeft.toString(),
+                wheelSpeed.SpeedRight.toString(),
+                headPoseWorld.roll.toString(),
+                headPoseWorld.pitch.toString(),
+                headPoseWorld.yaw.toString(),
+                headPoseJoint.roll.toString(),
+                headPoseJoint.pitch.toString(),
+                headPoseJoint.yaw.toString(),
+                baseImu.roll.toString(),
+                baseImu.pitch.toString(),
+                baseImu.yaw.toString(),
+                baseTick.left.toString(),
+                baseTick.right.toString()
+            )
+        }
+    }
 //}

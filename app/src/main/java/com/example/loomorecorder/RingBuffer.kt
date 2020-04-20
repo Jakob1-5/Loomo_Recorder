@@ -1,17 +1,16 @@
 package com.example.loomorecorder
 
+// Obs: this class does no pre-allocation of its container (MutableList<T>), which might have a performance impact
+class RingBuffer<T>(bufferSize: Int = 10, val allowOverwrite: Boolean = false) {
+    //    private val bufferContents = mutableListOf<T?>().apply {
+//        for (index in 0 until maxSize) {
+//            add(null)
+//        }
+//    }
+    private val bufferContents = mutableListOf<T>()
 
-//TODO: Use something other than null-assertion (!!) in 'peek()',
-// 'peekHead()' and 'getContents()'. The two first will functions will
-// cause a NPE if they are called on an empty buffer. They will also probably
-// do the same if the template-type 'T' is nullable
-class RingBuffer<T>(val maxSize: Int = 10, val allowOverwrite: Boolean = false) {
-    private val array = mutableListOf<T?>().apply {
-        for (index in 0 until maxSize) {
-            add(null)
-        }
-    }
-
+    var bufferSize = bufferSize
+        private set
     var head = 0        // Head: 'oldest' entry (read index)
         private set
     var tail = 0        // Tail: 'newest' entry (write index)
@@ -19,19 +18,39 @@ class RingBuffer<T>(val maxSize: Int = 10, val allowOverwrite: Boolean = false) 
     var itemsInQueue = 0    // N.o. items in the queue
         private set
 
-    fun clear() {
+    /**
+     * Clears the references to the contents of the buffer. The buffer
+     * still occupies the same amount of memory
+     */
+    fun clearContents() {
         head = 0
         tail = 0
         itemsInQueue = 0
     }
 
+    fun clear() {
+        bufferContents.clear()
+    }
+    fun clearAndResetBufferSize(newSize:Int = 10) {
+        bufferContents.clear()
+        bufferSize = newSize
+    }
+
+    fun increaseBufferSizeBy(n: Int) {
+        bufferSize += n
+    }
+
     fun enqueue(item: T): RingBuffer<T> {
-        if (itemsInQueue != 0) {
-            tail = (tail + 1) % maxSize
-        }
-        if (itemsInQueue == maxSize) {
+        // The functions in this class can be called asynchronously,
+        // so a temporary val is used for the tail index so that e.g. peek()
+        // doesn't access the tail before something has been put there
+        //TODO: do similar stuff to rest of class to make it more thread-safe
+        val tmpTail = if (itemsInQueue != 0) {
+            (tail + 1) % bufferSize
+        } else tail
+        if (itemsInQueue == bufferSize) {
             if (allowOverwrite) {
-                head = (head + 1) % maxSize
+                head = (head + 1) % bufferSize
             } else {
                 throw OverflowException("Queue is full, can't add $item")
             }
@@ -39,18 +58,25 @@ class RingBuffer<T>(val maxSize: Int = 10, val allowOverwrite: Boolean = false) 
             ++itemsInQueue
         }
 
-        array[tail] = item
+        if (bufferContents.size <= bufferSize) {
+            bufferContents.add(tmpTail, item)
+            head %= bufferContents.size //
+        }
+        else bufferContents[tmpTail] = item
+        tail = tmpTail
 
         return this
     }
 
-    fun dequeue(): T? {
+    fun dequeue(): T {
         if (itemsInQueue == 0) {
-            throw UnderflowException("Queue is empty, can't dequeue()")
+            throw EmptyBufferException("Queue is empty, can't dequeue()")
         }
 
-        val item = array[head]
-        head = (head + 1) % maxSize
+//        val item = bufferContents[head % (bufferContents.size)]
+        val item = bufferContents[head]
+        head = (head + 1) % bufferSize
+        itemsInQueue--
 
         return item
     }
@@ -63,31 +89,34 @@ class RingBuffer<T>(val maxSize: Int = 10, val allowOverwrite: Boolean = false) 
         val index = if (offset <= tail) {
             tail - offset
         } else {
-            maxSize - (offset - tail)
+            bufferSize - (offset - tail)
         }
-        return array[index]!!
+        return if (bufferContents.isNotEmpty()) bufferContents[index] //?: throw EmptyBufferException("Buffer is empty")
+        else throw EmptyBufferException("RingBuffer is empty")
     }
 
-    fun peekHead(): T = array[head]!!
+    fun peekHead(): T = bufferContents[head]
 
     fun getContents(): MutableList<T> {
         return mutableListOf<T>().apply {
             var itemCount = itemsInQueue
             var readIndex = head
             while (itemCount > 0) {
-                add(array[readIndex]!!)
-                readIndex = (readIndex + 1) % maxSize
+                add(bufferContents[readIndex])
+                readIndex = (readIndex + 1) % bufferSize
                 itemCount--
             }
         }
     }
 
     fun isEmpty() = itemsInQueue == 0
-    fun freeSpace() = maxSize - itemsInQueue
+    fun isNotEmpty() = itemsInQueue != 0
+    fun freeSpace() = bufferSize - itemsInQueue
     operator fun get(index: Int): T? {
-        return array[index]
+        return bufferContents[index]
     }
+
 }
 
 class OverflowException(msg: String) : RuntimeException(msg)
-class UnderflowException(msg: String) : RuntimeException(msg)
+class EmptyBufferException(msg: String) : RuntimeException(msg)
