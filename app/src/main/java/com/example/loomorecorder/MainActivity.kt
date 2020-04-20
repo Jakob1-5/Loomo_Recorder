@@ -16,25 +16,13 @@ import com.example.loomorecorder.CameraUtils.fishEyeBitmap
 import com.example.loomorecorder.CameraUtils.fishEyeFrameBuffer
 import com.example.loomorecorder.loomoUtils.AllSensors
 import com.example.loomorecorder.loomoUtils.LoomoRealSense
-import com.example.loomorecorder.loomoUtils.LoomoRealSense.COLOR_HEIGHT
-import com.example.loomorecorder.loomoUtils.LoomoRealSense.COLOR_WIDTH
-import com.example.loomorecorder.loomoUtils.LoomoRealSense.DEPTH_HEIGHT
-import com.example.loomorecorder.loomoUtils.LoomoRealSense.DEPTH_WIDTH
-import com.example.loomorecorder.loomoUtils.LoomoRealSense.FISHEYE_HEIGHT
-import com.example.loomorecorder.loomoUtils.LoomoRealSense.FISHEYE_WIDTH
 import com.example.loomorecorder.loomoUtils.LoomoSensor
 import com.example.loomorecorder.loomoUtils.LoomoSensor.getAllSensors
 import com.opencsv.CSVWriter
-import com.segway.robot.sdk.vision.frame.Frame
-import com.segway.robot.sdk.vision.stream.StreamType
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.opencv.android.BaseLoaderCallback
-import org.opencv.android.LoaderCallbackInterface
-import org.opencv.android.OpenCVLoader
-import org.opencv.core.CvType
 import java.io.File
 import java.io.FileOutputStream
 import java.io.FileWriter
@@ -43,7 +31,6 @@ import java.io.IOException
 class MainActivity : AppCompatActivity() {
 
     private val TAG = "MainActivity"
-    lateinit var mLoaderCallback: BaseLoaderCallback
 
     private val csvSavingLoop = NonBlockingInfLoop {
         if (recording) {
@@ -197,19 +184,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appPath: String
 
     init {
-
         csvSavingLoop.pause()
         fisheyeSavingLoop.pause()
         colorSavingLoop.pause()
         depthSavingLoop.pause()
-
-
-        //Load OpenCV
-        if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "OpenCV not loaded")
-        } else {
-            Log.d(TAG, "OpenCV loaded")
-        }
     }
 
 
@@ -217,15 +195,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-
-        mLoaderCallback = object : BaseLoaderCallback(this) {
-            override fun onManagerConnected(status: Int) {
-                when (status) {
-                    LoaderCallbackInterface.SUCCESS -> Log.d(TAG, "OpenCV loaded successfully")
-                    else -> super.onManagerConnected(status)
-                }
-            }
-        }
 
 
         appPath = application.getExternalFilesDir(baseDir).toString()
@@ -311,20 +280,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         Log.i(TAG, "Activity resumed")
-        if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization")
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback)
-        } else {
-            Log.d(TAG, "OpenCV library found inside package. Using it!")
-            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS)
-        }
 
 
         LoomoRealSense.bind(this)
         LoomoRealSense.startCameras { streamType, frame ->
-            if (recording) {
-                CameraUtils.onNewFrame(streamType, frame)
-            }
+            CameraUtils.onNewFrame(streamType, frame, recording)
             runOnUiThread {
                 camViewFishEye.setImageBitmap(fishEyeBitmap)
                 camViewColor.setImageBitmap(colorBitmap)

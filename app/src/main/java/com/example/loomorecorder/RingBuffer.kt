@@ -73,8 +73,8 @@ class RingBuffer<T>(bufferSize: Int = 10, val allowOverwrite: Boolean = false) {
             throw EmptyBufferException("Queue is empty, can't dequeue()")
         }
 
-//        val item = bufferContents[head % (bufferContents.size)]
-        val item = bufferContents[head]
+        val item = bufferContents[head % (bufferContents.size)]
+//        val item = bufferContents[head]
         head = (head + 1) % bufferSize
         itemsInQueue--
 
