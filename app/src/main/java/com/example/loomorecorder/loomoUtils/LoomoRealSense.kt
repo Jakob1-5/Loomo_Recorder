@@ -4,6 +4,7 @@
 package com.example.loomorecorder.loomoUtils
 
 import android.content.Context
+import android.os.Process
 import android.util.Log
 import com.segway.robot.sdk.base.bind.ServiceBinder
 import com.segway.robot.sdk.vision.Vision
@@ -11,6 +12,7 @@ import com.segway.robot.sdk.vision.frame.Frame
 import com.segway.robot.sdk.vision.stream.StreamType
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlin.concurrent.thread
 
 
 object LoomoRealSense {
@@ -78,6 +80,16 @@ object LoomoRealSense {
     fun startCameras(callback: (streamType: Int, frame: Frame) -> Unit) {
         startCamera(StreamType.FISH_EYE, callback)
         startCamera(StreamType.COLOR, callback)
+        startCamera(StreamType.DEPTH, callback)
+    }
+
+    fun startFisheye(callback: (streamType: Int, frame: Frame) -> Unit) {
+        startCamera(StreamType.FISH_EYE, callback)
+    }
+    fun startColor(callback: (streamType: Int, frame: Frame) -> Unit) {
+        startCamera(StreamType.COLOR, callback)
+    }
+    fun startDepth(callback: (streamType: Int, frame: Frame) -> Unit) {
         startCamera(StreamType.DEPTH, callback)
     }
 

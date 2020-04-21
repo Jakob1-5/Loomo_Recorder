@@ -3,22 +3,24 @@ package com.example.loomorecorder
 import android.graphics.Bitmap
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Process
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.Toast
-import com.example.loomorecorder.CameraUtils.bufferBaseSize
-import com.example.loomorecorder.CameraUtils.colorBitmap
-import com.example.loomorecorder.CameraUtils.colorFrameBuffer
-import com.example.loomorecorder.CameraUtils.depthBitmap
-import com.example.loomorecorder.CameraUtils.depthFrameBuffer
-import com.example.loomorecorder.CameraUtils.fishEyeBitmap
-import com.example.loomorecorder.CameraUtils.fishEyeFrameBuffer
 import com.example.loomorecorder.loomoUtils.AllSensors
 import com.example.loomorecorder.loomoUtils.LoomoRealSense
+import com.example.loomorecorder.loomoUtils.LoomoRealSense.COLOR_HEIGHT
+import com.example.loomorecorder.loomoUtils.LoomoRealSense.COLOR_WIDTH
+import com.example.loomorecorder.loomoUtils.LoomoRealSense.DEPTH_HEIGHT
+import com.example.loomorecorder.loomoUtils.LoomoRealSense.DEPTH_WIDTH
+import com.example.loomorecorder.loomoUtils.LoomoRealSense.FISHEYE_HEIGHT
+import com.example.loomorecorder.loomoUtils.LoomoRealSense.FISHEYE_WIDTH
 import com.example.loomorecorder.loomoUtils.LoomoSensor
 import com.example.loomorecorder.loomoUtils.LoomoSensor.getAllSensors
 import com.opencsv.CSVWriter
+import com.segway.robot.sdk.vision.frame.Frame
+import com.segway.robot.sdk.vision.stream.StreamType
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -27,154 +29,12 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.FileWriter
 import java.io.IOException
+import java.nio.ByteBuffer
+import kotlin.properties.Delegates
 
 class MainActivity : AppCompatActivity() {
 
     private val TAG = "MainActivity"
-
-    private val csvSavingLoop = NonBlockingInfLoop {
-        if (recording) {
-            csvBusy = true
-            val fisheyeStamp = try {
-                fishEyeFrameBuffer.peek().timeStamp.toString()
-            } catch (e: EmptyBufferException) {
-                "no frame"
-            }
-            val colorStamp = try {
-                colorFrameBuffer.peek().timeStamp.toString()
-            } catch (e: EmptyBufferException) {
-                "no frame"
-            }
-            val depthStamp = try {
-                depthFrameBuffer.peek().timeStamp.toString()
-            } catch (e: EmptyBufferException) {
-                "no frame"
-            }
-            val logEntry = arrayOf(*getAllSensors().toStringArray(), fisheyeStamp, colorStamp, depthStamp)
-            saveTxt(logEntry, dirForThisRecording, csvName)
-            csvBusy = false
-        }
-    }
-    private val fisheyeSavingLoop = NonBlockingInfLoop {
-        if (recording) {
-            fisheyeBusy = true
-
-            var frameCount = 0
-            var avgframeSavingTime: Long = 0
-            while (fishEyeFrameBuffer.isNotEmpty() or recording) {
-                try {
-                    val imgFrame = fishEyeFrameBuffer.dequeue()
-                    val tic = System.currentTimeMillis()
-                    saveImg(
-                        imgFrame.frame,
-                        dirForFisheye,
-                        imgFrame.timeStamp.toString()
-                    )
-                    avgframeSavingTime += System.currentTimeMillis()-tic
-                    frameCount++
-                } catch (e: EmptyBufferException) {
-                    //very unlikely to happen
-                }
-                if ((fishEyeFrameBuffer.freeSpace() < 30) and recording) {
-                    fishEyeFrameBuffer.increaseBufferSizeBy(30)
-                    Log.d(TAG, "Increasing fisheye buffer size")
-                }
-                runOnUiThread {
-                    textView1.text = "Fisheye buffer size: ${fishEyeFrameBuffer.bufferSize}"
-                    textView2.text =
-                        if (recording) "Free space: ${fishEyeFrameBuffer.freeSpace()}"
-                        else "Images remaining: ${fishEyeFrameBuffer.itemsInQueue}"
-                }
-            }
-            runOnUiThread {
-                textView1.text = "Fisheye frames took avg. of ${avgframeSavingTime/frameCount} ms to save"
-                textView2.text = "Frames captured: $frameCount"
-            }
-
-            Log.d(TAG, "End of fisheyeSavingLoop")
-            fisheyeBusy = false
-        }
-    }
-    private val colorSavingLoop = NonBlockingInfLoop {
-        if (recording) {
-            colorBusy = true
-
-            var frameCount = 0
-            var avgframeSavingTime: Long = 0
-            while (colorFrameBuffer.isNotEmpty() or recording) {
-                try {
-                    val imgFrame = colorFrameBuffer.dequeue()
-                    val tic = System.currentTimeMillis()
-                    saveImg(
-                        imgFrame.frame,
-                        dirForColor,
-                        imgFrame.timeStamp.toString()
-                    )
-                    avgframeSavingTime += System.currentTimeMillis()-tic
-                    frameCount++
-                } catch (e: EmptyBufferException) {
-                    //very unlikely to happen
-                }
-                if ((colorFrameBuffer.freeSpace() < 30) and recording) {
-                    colorFrameBuffer.increaseBufferSizeBy(30)
-                    Log.d(TAG, "Increasing color buffer size")
-                }
-                runOnUiThread {
-                    textView3.text = "Color buffer size: ${colorFrameBuffer.bufferSize}"
-                    textView4.text =
-                        if (recording) "Free space: ${colorFrameBuffer.freeSpace()}"
-                        else "Images remaining: ${colorFrameBuffer.itemsInQueue}"
-                }
-            }
-            runOnUiThread {
-                textView3.text = "Color frames took avg. of ${avgframeSavingTime/frameCount} ms to save"
-                textView4.text = "Frames captured: $frameCount"
-            }
-
-            Log.d(TAG, "End of colorSavingLoop")
-            colorBusy = false
-        }
-    }
-    private val depthSavingLoop = NonBlockingInfLoop {
-        if (recording) {
-            depthBusy = true
-
-            var frameCount = 0
-            var avgframeSavingTime: Long = 0
-            while (depthFrameBuffer.isNotEmpty() or recording) {
-                try {
-                    val imgFrame = depthFrameBuffer.dequeue()
-                    val tic = System.currentTimeMillis()
-                    saveImg(
-                        imgFrame.frame,
-                        dirForDepth,
-                        imgFrame.timeStamp.toString()
-                    )
-                    avgframeSavingTime += System.currentTimeMillis()-tic
-                    frameCount++
-                } catch (e: EmptyBufferException) {
-                    //very unlikely to happen
-                }
-                if ((depthFrameBuffer.freeSpace() < 30) and recording) {
-                    depthFrameBuffer.increaseBufferSizeBy(30)
-                    Log.d(TAG, "Increasing depth buffer size")
-                }
-                runOnUiThread {
-                    textView5.text = "Depth buffer size: ${depthFrameBuffer.bufferSize}"
-                    textView6.text =
-                        if (recording) "Free space: ${depthFrameBuffer.freeSpace()}"
-                        else "Images remaining: ${depthFrameBuffer.itemsInQueue}"
-                }
-            }
-            runOnUiThread {
-                textView5.text = "Depth frames took avg. of ${avgframeSavingTime/frameCount} ms to save"
-                textView6.text = "Frames captured: $frameCount"
-            }
-
-            Log.d(TAG, "End of depthSavingLoop")
-            depthBusy = false
-        }
-    }
 
     private var recordingsCounter = 0
     private val baseDir = "recordings"
@@ -183,11 +43,20 @@ class MainActivity : AppCompatActivity() {
     private val depthDir = "depth"
     private lateinit var appPath: String
 
+    private val csvLoopedThread = LoopedThread("csvSaving", Process.THREAD_PRIORITY_DEFAULT)
+    private val fisheyeLoopedThread = LoopedThread("fisheyeSaving", Process.THREAD_PRIORITY_DEFAULT)
+    private val colorLoopedThread = LoopedThread("colorSaving", Process.THREAD_PRIORITY_DEFAULT)
+    private val depthLoopedThread = LoopedThread("depthSaving", Process.THREAD_PRIORITY_DEFAULT)
+
     init {
-        csvSavingLoop.pause()
-        fisheyeSavingLoop.pause()
-        colorSavingLoop.pause()
-        depthSavingLoop.pause()
+//        csvSavingLoop.pause()
+//        fisheyeSavingLoop.pause()
+//        colorSavingLoop.pause()
+//        depthSavingLoop.pause()
+        csvLoopedThread.start()
+        fisheyeLoopedThread.start()
+        colorLoopedThread.start()
+        depthLoopedThread.start()
     }
 
 
@@ -230,28 +99,23 @@ class MainActivity : AppCompatActivity() {
             }
         }
         btn2.setOnClickListener {
-            Log.i(
-                TAG, getAllSensors().toString()
-//                        + "\n${fishEyeFrameBuffer.peek().info.imuTimeStamp}"
-//                        + "\n${fishEyeFrameBuffer.peek().info.platformTimeStamp}" //correct timestamp info
-            )
         }
         btn3.setOnClickListener {
             var a = ""
             for (i in getAllSensors().toStringArray()) a += i
             Log.i(TAG, a)
         }
-        var recording = false
+//        recording = false
         btn4.setOnClickListener {
             when {
                 !busySaving and !recording -> {
                     startRecording()
-                    recording = true
+//                    recording = true
                     btn4.text = getString(R.string.stopRecording)
                 }
                 busySaving and recording -> {
                     stopRecording()
-                    recording = false
+//                    recording = false
                     btn4.text = getString(R.string.startRecording)
                 }
                 busySaving and !recording -> {
@@ -261,21 +125,14 @@ class MainActivity : AppCompatActivity() {
                         "Busy saving, cant start new recording yet",
                         Toast.LENGTH_LONG
                     ).show()
-                    recording = false
+//                    recording = false
                 }
                 !busySaving and recording -> {
                     // shouldn't happen
-                    recording = false
+//                    recording = false
                 }
-
-
-                //            SavingUtils.saveImg(fishEyeFrameBuffer.peek().frame.toBitmap(), application.getExternalFilesDir("Images"), "01Fisheye")
             }
-
-
-//            SavingUtils.saveImg(fishEyeFrameBuffer.peek().frame.toBitmap(), application.getExternalFilesDir("Images"), "01Fisheye")
         }
-
     }
 
     override fun onResume() {
@@ -283,17 +140,58 @@ class MainActivity : AppCompatActivity() {
 
 
         LoomoRealSense.bind(this)
-        LoomoRealSense.startCameras { streamType, frame ->
-            CameraUtils.onNewFrame(streamType, frame, recording)
-            runOnUiThread {
-                camViewFishEye.setImageBitmap(fishEyeBitmap)
-                camViewColor.setImageBitmap(colorBitmap)
-                camViewDepth.setImageBitmap(depthBitmap)
+        LoomoRealSense.startFisheye { streamType, frame ->
+            if (recording) {
+                appendFrame(frame, fishEyeFile)
+                fishEyeTimeStamp = frame.info.imuTimeStamp
+            } else {
+                runOnUiThread {
+                    camViewFishEye.setImageBitmap(
+                        frame.byteBuffer.toBitmap(
+                            FISHEYE_WIDTH,
+                            FISHEYE_HEIGHT,
+                            Bitmap.Config.ALPHA_8
+                        )
+                    )
+                }
+            }
+        }
+        LoomoRealSense.startColor { streamType, frame ->
+            if (recording) {
+                appendFrame(frame, colorFile)
+                colorTimeStamp = frame.info.imuTimeStamp
+            } else {
+                runOnUiThread {
+                    camViewColor.setImageBitmap(
+                        frame.byteBuffer.toBitmap(
+                            COLOR_WIDTH,
+                            COLOR_HEIGHT,
+                            Bitmap.Config.ARGB_8888
+                        )
+                    )
+                }
+            }
+        }
+        LoomoRealSense.startDepth { streamType, frame ->
+            if (recording) {
+                appendFrame(frame, depthFile)
+                depthTimeStamp = frame.info.imuTimeStamp
+            } else {
+                runOnUiThread {
+                    camViewDepth.setImageBitmap(
+                        frame.byteBuffer.toBitmap(
+                            DEPTH_WIDTH,
+                            DEPTH_HEIGHT,
+                            Bitmap.Config.RGB_565
+                        )
+                    )
+                }
             }
         }
 
-        LoomoSensor.bind(this)
 
+
+        LoomoSensor.bind(this)
 
         // Hacky trick to make the app fullscreen:
         textView2.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
@@ -301,27 +199,43 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+//    fun updateCamViews(streamType: Int) {
+//        when (streamType) {
+//            StreamType.FISH_EYE -> runOnUiThread { camViewFishEye.setImageBitmap(fishEyeBitmap) }
+////            StreamType.COLOR -> runOnUiThread { camViewColor.setImageBitmap(colorBitmap) }
+////            StreamType.DEPTH -> runOnUiThread { camViewDepth.setImageBitmap(depthBitmap) }
+//        }
+//    }
+
+
     // stuff for recording
 
 
+    private var recording = false
     private var busySaving = false
-    var recording = false
     private var csvBusy = false
     private var fisheyeBusy = false
     private var colorBusy = false
     private var depthBusy = false
     private var dirForThisRecording = ""
-    private var dirForFisheye = ""
-    private var dirForColor = ""
-    private var dirForDepth = ""
-    private val csvName = "test5"
+    private val csvName = "sensor_data"
+
+    private val fishEyeStreamInfo = VidStreamInfo(FISHEYE_WIDTH, FISHEYE_HEIGHT, 1)
+    private val colorStreamInfo = VidStreamInfo(COLOR_WIDTH, COLOR_HEIGHT, 4)
+    private val depthStreamInfo = VidStreamInfo(DEPTH_WIDTH, DEPTH_HEIGHT, 2)
+
+    private var fishEyeTimeStamp = 0L
+    private var colorTimeStamp = 0L
+    private var depthTimeStamp = 0L
+
+    private lateinit var fishEyeFile: File
+    private lateinit var colorFile: File
+    private lateinit var depthFile: File
 
     fun startRecording() {
         if (recording or busySaving) {
-            // can't start recording
+            Log.d(TAG, "Can't start recording. recording = $recording, busySaving = $busySaving")
         } else {
-            recording = true
-            busySaving = true
             // create new dirs and files
             while (File("$appPath/${String.format("%04d", recordingsCounter)}").isDirectory) {
                 recordingsCounter++
@@ -332,42 +246,62 @@ class MainActivity : AppCompatActivity() {
                     recordingsCounter
                 )}"
             ).toString()
-            dirForFisheye = application.getExternalFilesDir(
-                "$baseDir/${String.format(
-                    "%04d",
-                    recordingsCounter
-                )}/$fisheyeDir"
-            ).toString()
-            dirForColor = application.getExternalFilesDir(
-                "$baseDir/${String.format(
-                    "%04d",
-                    recordingsCounter
-                )}/$colorDir"
-            ).toString()
-            dirForDepth = application.getExternalFilesDir(
-                "$baseDir/${String.format(
-                    "%04d",
-                    recordingsCounter
-                )}/$depthDir"
-            ).toString()
+
+            fishEyeFile = File(dirForThisRecording, "fisheye.myvid")
+            var counter = 0
+            while (!fishEyeFile.createNewFile()) {
+                ++counter
+                fishEyeFile = File(dirForThisRecording, "fisheye_${String.format("%03d", counter)}.myvid")
+            }
+            counter = 0
+
+            colorFile = File(dirForThisRecording, "color.myvid")
+            while (!colorFile.createNewFile()) {
+                ++counter
+                colorFile = File(dirForThisRecording, "color_${String.format("%03d", counter)}.myvid")
+            }
+            counter = 0
+
+            depthFile = File(dirForThisRecording, "depth.myvid")
+            while (!depthFile.createNewFile()) {
+                ++counter
+                depthFile = File(dirForThisRecording, "depth_${String.format("%03d", counter)}.myvid")
+            }
 
 
-            val header = arrayOf<String>(*AllSensors.getStringArrayHeader(), "fishEyeIndex", "colorIndex", "depthIndex")
+
+
+            recording = true
+            busySaving = true
+
+            fishEyeFile.appendBytes(fishEyeStreamInfo.toByteArray())
+            colorFile.appendBytes(colorStreamInfo.toByteArray())
+            depthFile.appendBytes(depthStreamInfo.toByteArray())
+
+            val header = arrayOf<String>(
+                *AllSensors.getStringArrayHeader(),
+                "fishEyeIndex",
+                "colorIndex",
+                "depthIndex"
+            )
 
             saveTxt(header, dirForThisRecording, csvName)
-            csvSavingLoop.resume()
-            fisheyeSavingLoop.resume()
-            colorSavingLoop.resume()
-            depthSavingLoop.resume()
+            csvLoopedThread.handler.post { csvSavingLoop() }
+//            fisheyeLoopedThread.handler.post { fisheyeSavingLoop() }
+//            colorLoopedThread.handler.post { colorSavingLoop() }
+//            depthLoopedThread.handler.post { depthSavingLoop() }
         }
     }
 
     fun stopRecording() {
         recording = false
-        csvSavingLoop.pause()
-        fisheyeSavingLoop.pause()
-        colorSavingLoop.pause()
-        depthSavingLoop.pause()
+        fishEyeTimeStamp = 0L
+        colorTimeStamp = 0L
+        depthTimeStamp = 0L
+//        csvSavingLoop.pause()
+//        fisheyeSavingLoop.pause()
+//        colorSavingLoop.pause()
+//        depthSavingLoop.pause()
 //        while (csvBusy or fisheyeBusy or colorBusy or depthBusy) {
 //        }
         GlobalScope.launch {
@@ -379,9 +313,8 @@ class MainActivity : AppCompatActivity() {
                 btn4.text = "Start recording"
                 Toast.makeText(applicationContext, "Done saving", Toast.LENGTH_LONG).show()
             }
-            fishEyeFrameBuffer.clearAndResetBufferSize(bufferBaseSize)
+            busySaving = false
         }
-        busySaving = false
     }
 
 
@@ -398,7 +331,60 @@ class MainActivity : AppCompatActivity() {
         writer.writeNext(txt)
         writer.close()
     }
+    fun ByteBuffer.toByteArray(): ByteArray {
+        val bytesInBuffer = this.remaining()
+        val tmpArr = ByteArray(bytesInBuffer) { this.get() }
+        this.rewind()
+        return tmpArr
+    }
+    fun ByteBuffer.toBitmap(width: Int, height: Int, config: Bitmap.Config): Bitmap {
+        val bmp = Bitmap.createBitmap(width, height, config)
+        bmp.copyPixelsFromBuffer(this)
+        this.rewind()
+        return bmp
+    }
+    fun Long.toByteArray(): ByteArray {
+        return byteArrayOf(
+            (this shr 56).toByte(),
+            (this shr 48).toByte(),
+            (this shr 40).toByte(),
+            (this shr 32).toByte(),
+            (this shr 24).toByte(),
+            (this shr 16).toByte(),
+            (this shr 8).toByte(),
+            this.toByte()
+        )
+    }
+    fun Int.toByteArray(): ByteArray {
+        return byteArrayOf(
+            (this shr 24).toByte(),
+            (this shr 16).toByte(),
+            (this shr 8).toByte(),
+            this.toByte()
+        )
+    }
+    data class VidStreamInfo(
+        val width: Int,
+        val height: Int,
+        val channels: Int
+    ) {
+        fun Int.toByteArray(): ByteArray {
+            return byteArrayOf(
+                (this shr 24).toByte(),
+                (this shr 16).toByte(),
+                (this shr 8).toByte(),
+                this.toByte()
+            )
+        }
+        fun toByteArray(): ByteArray {
+            return byteArrayOf(*width.toByteArray(), *height.toByteArray(), *channels.toByteArray())
+        }
+    }
 
+    private fun appendFrame(frame: Frame, file: File) {
+        file.appendBytes(frame.info.imuTimeStamp.toByteArray())
+        file.appendBytes(frame.byteBuffer.toByteArray())
+    }
 
     fun saveImg(bitmap: Bitmap?, dir: String, name: String) {
         if (bitmap == null) {
@@ -433,6 +419,36 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 //        }
+    }
+
+    //    private val csvSavingLoop = NonBlockingInfLoop {
+    private fun csvSavingLoop() {
+        while (recording) {
+            csvBusy = true
+//            val fisheyeStamp = try {
+//                if (fishEyeFrameBuffer.peek() == null) "null"
+//                else fishEyeFrameBuffer.peek()!!.timeStamp.toString()
+//            } catch (e: EmptyBufferException) {
+//                "no frame"
+//            }
+//            val colorStamp = try {
+//                if (colorFrameBuffer.peek() == null) "null"
+//                else colorFrameBuffer.peek()!!.timeStamp.toString()
+//            } catch (e: EmptyBufferException) {
+//                "no frame"
+//            }
+//            val depthStamp = try {
+//                if (depthFrameBuffer.peek() == null) "null"
+//                else depthFrameBuffer.peek()!!.timeStamp.toString()
+//            } catch (e: EmptyBufferException) {
+//                "no frame"
+//            }
+            val logEntry =
+//                arrayOf(*getAllSensors().toStringArray(), fisheyeStamp, colorStamp, depthStamp)
+                arrayOf(*getAllSensors().toStringArray(), fishEyeTimeStamp.toString(), colorTimeStamp.toString(), depthTimeStamp.toString())
+            saveTxt(logEntry, dirForThisRecording, csvName)
+            csvBusy = false
+        }
     }
 
 
