@@ -98,11 +98,12 @@ package com.example.loomorecorder.loomoUtils
 
     data class AllSensors(
         val surroundings :SensSurroundings,
+        val pose2D : SensPose2D,
+        val baseTick :SensBaseTick,
         val wheelSpeed :SensWheelSpeed,
         val headPoseWorld :SensHeadPoseWorld,
         val headPoseJoint :SensHeadPoseJoint,
         val baseImu :SensBaseImu,
-        val baseTick :SensBaseTick,
         val timeStamp: Long
     )
     {
@@ -115,6 +116,7 @@ package com.example.loomorecorder.loomoUtils
                 $headPoseJoint
                 $baseImu
                 $baseTick
+                $pose2D
                 Timestamp = $timeStamp
             """.trimIndent()
         }
@@ -125,6 +127,13 @@ package com.example.loomorecorder.loomoUtils
                     "surroundings_IR_Left",
                     "surroundings_IR_Right",
                     "surroundings_UltraSonic",
+                    "pose2D_x",
+                    "pose2D_y",
+                    "pose2D_theta",
+                    "pose2D_linearVelocity",
+                    "pose2D_angularVelocity",
+                    "baseTick_left",
+                    "baseTick_right",
                     "wheelSpeed_SpeedLeft",
                     "wheelSpeed_SpeedRight",
                     "headPoseWorld_roll",
@@ -135,9 +144,7 @@ package com.example.loomorecorder.loomoUtils
                     "headPoseJoint_yaw",
                     "baseImu_roll",
                     "baseImu_pitch",
-                    "baseImu_yaw",
-                    "baseTick_left",
-                    "baseTick_right"
+                    "baseImu_yaw"
                 )
             }
         }
@@ -147,6 +154,13 @@ package com.example.loomorecorder.loomoUtils
                 surroundings.IR_Left.toString(),
                 surroundings.IR_Right.toString(),
                 surroundings.UltraSonic.toString(),
+                pose2D.x.toString(),
+                pose2D.y.toString(),
+                pose2D.theta.toString(),
+                pose2D.linearVelocity.toString(),
+                pose2D.angularVelocity.toString(),
+                baseTick.left.toString(),
+                baseTick.right.toString(),
                 wheelSpeed.SpeedLeft.toString(),
                 wheelSpeed.SpeedRight.toString(),
                 headPoseWorld.roll.toString(),
@@ -157,9 +171,7 @@ package com.example.loomorecorder.loomoUtils
                 headPoseJoint.yaw.toString(),
                 baseImu.roll.toString(),
                 baseImu.pitch.toString(),
-                baseImu.yaw.toString(),
-                baseTick.left.toString(),
-                baseTick.right.toString()
+                baseImu.yaw.toString()
             )
         }
     }

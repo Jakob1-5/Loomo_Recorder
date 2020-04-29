@@ -127,13 +127,14 @@ object LoomoSensor {
     fun getAllSensors(): AllSensors {
         return AllSensors(
             getSurroundings(),
+            getSensPose2D(),
+            getSensBaseTick(),
             getWheelSpeed(),
             getHeadPoseWorld(),
             getHeadPoseJoint(),
             getSensBaseImu(),
-            getSensBaseTick(),
 //            mSensor.robotAllSensors.basePose.timestamp
-            System.currentTimeMillis()*1000
+            System.currentTimeMillis()
         )
     }
 
