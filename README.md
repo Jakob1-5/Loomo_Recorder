@@ -16,3 +16,6 @@ Each recording is stored in a numbered sub-folder and consists of a .csv file an
 
 The binary files are prefixed with 3 integers. They tell the width and height of the video frames. The third integer tells the number of bytes per pixel, and thus by extension which camera stream it is. The color camera is 4 bytes per pixel, the depth camera is 2 bytes (each pixel is 16 bits stored in little endian format), and the fisheye is 1 byte per pixel.
 The pixels of a frame are stored in column-major order. Each video frame is prefixed with a timestamp (unsigned long int). The RealSense camera runs on a different clock, so this timestamp is different from the other sensors. However, the timestamp of the current camera frame is always written to the .csv file, which makes it possible to syncronize the video stream with the other sensors (the cameras' timestamp can be better thought of as a frame index).
+
+
+![alt-text](https://github.com/Jakob1-5/Loomo_Recorder/blob/Save_raw_vid/myvid_structure.png "Structure of video binary files")
