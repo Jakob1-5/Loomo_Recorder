@@ -15,6 +15,7 @@ package com.example.loomorecorder.loomoUtils
 
 import android.content.Context
 import android.util.Log
+import com.segway.robot.algo.tf.AlgoTfData
 import com.segway.robot.sdk.base.bind.ServiceBinder.BindStateListener
 import com.segway.robot.sdk.perception.sensor.RobotAllSensors
 import com.segway.robot.sdk.perception.sensor.Sensor
@@ -46,8 +47,8 @@ object LoomoSensor {
                 Log.d(TAG, "Sensor onUnbind")
             }
         })
-    }
 
+    }
 
     fun getSurroundings(): SensSurroundings {
         val mInfraredData = mSensor.querySensorData(listOf(Sensor.INFRARED_BODY))[0]
@@ -124,6 +125,19 @@ object LoomoSensor {
 //        return mSensor.robotAllSensors
 //    }
 
+    fun getFETf() : CamTf {
+        val tf = LoomoSensor.mSensor.getTfData(Sensor.BASE_ODOM_FRAME, Sensor.RS_FE_FRAME,  -1, 100)
+        return CamTf(tf.t.x, tf.t.y, tf.t.z, tf.q.rollRad, tf.q.pitchRad, tf.q.yawRad)
+    }
+    fun getColTf() : CamTf {
+        val tf = LoomoSensor.mSensor.getTfData(Sensor.BASE_ODOM_FRAME, Sensor.RS_COLOR_FRAME,  -1, 100)
+        return CamTf(tf.t.x, tf.t.y, tf.t.z, tf.q.rollRad, tf.q.pitchRad, tf.q.yawRad)
+    }
+    fun getDepthTf() : CamTf {
+        val tf = LoomoSensor.mSensor.getTfData(Sensor.BASE_ODOM_FRAME, Sensor.RS_DEPTH_FRAME,  -1, 100)
+        return CamTf(tf.t.x, tf.t.y, tf.t.z, tf.q.rollRad, tf.q.pitchRad, tf.q.yawRad)
+    }
+
     fun getAllSensors(): AllSensors {
         return AllSensors(
             getSurroundings(),
@@ -133,6 +147,9 @@ object LoomoSensor {
             getHeadPoseWorld(),
             getHeadPoseJoint(),
             getSensBaseImu(),
+            getFETf(),
+            getColTf(),
+            getDepthTf(),
 //            mSensor.robotAllSensors.basePose.timestamp
             System.currentTimeMillis()
         )

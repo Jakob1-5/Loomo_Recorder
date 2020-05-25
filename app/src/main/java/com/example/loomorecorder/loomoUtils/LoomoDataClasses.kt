@@ -96,6 +96,15 @@ package com.example.loomorecorder.loomoUtils
         var height : Int = 0
     )
 
+    data class CamTf(
+        var tx: Float,
+        var ty: Float,
+        var tz: Float,
+        var roll: Float,
+        var pitch: Float,
+        var yaw: Float
+    )
+
     data class AllSensors(
         val surroundings :SensSurroundings,
         val pose2D : SensPose2D,
@@ -104,6 +113,9 @@ package com.example.loomorecorder.loomoUtils
         val headPoseWorld :SensHeadPoseWorld,
         val headPoseJoint :SensHeadPoseJoint,
         val baseImu :SensBaseImu,
+        val fishEyeTf: CamTf,
+        val colorTf : CamTf,
+        val depthTf : CamTf,
         val timeStamp: Long
     )
     {
@@ -117,6 +129,9 @@ package com.example.loomorecorder.loomoUtils
                 $baseImu
                 $baseTick
                 $pose2D
+                $fishEyeTf
+                $colorTf
+                $depthTf
                 Timestamp = $timeStamp
             """.trimIndent()
         }
@@ -144,7 +159,25 @@ package com.example.loomorecorder.loomoUtils
                     "headPoseJoint_yaw",
                     "baseImu_roll",
                     "baseImu_pitch",
-                    "baseImu_yaw"
+                    "baseImu_yaw",
+                    "fishEyeTf_tx",
+                    "fishEyeTf_ty",
+                    "fishEyeTf_tz",
+                    "fishEyeTf_roll",
+                    "fishEyeTf_pitch",
+                    "fishEyeTf_yaw",
+                    "colorTf_tx",
+                    "colorTf_ty",
+                    "colorTf_tz",
+                    "colorTf_roll",
+                    "colorTf_pitch",
+                    "colorTf_yaw",
+                    "depthTf_tx",
+                    "depthTf_ty",
+                    "depthTf_tz",
+                    "depthTf_roll",
+                    "depthTf_pitch",
+                    "depthTf_yaw"
                 )
             }
         }
@@ -171,7 +204,25 @@ package com.example.loomorecorder.loomoUtils
                 headPoseJoint.yaw.toString(),
                 baseImu.roll.toString(),
                 baseImu.pitch.toString(),
-                baseImu.yaw.toString()
+                baseImu.yaw.toString(),
+                fishEyeTf.tx.toString(),
+                fishEyeTf.ty.toString(),
+                fishEyeTf.tz.toString(),
+                fishEyeTf.roll.toString(),
+                fishEyeTf.pitch.toString(),
+                fishEyeTf.yaw.toString(),
+                colorTf.tx.toString(),
+                colorTf.ty.toString(),
+                colorTf.tz.toString(),
+                colorTf.roll.toString(),
+                colorTf.pitch.toString(),
+                colorTf.yaw.toString(),
+                depthTf.tx.toString(),
+                depthTf.ty.toString(),
+                depthTf.tz.toString(),
+                depthTf.roll.toString(),
+                depthTf.pitch.toString(),
+                depthTf.yaw.toString()
             )
         }
     }

@@ -22,7 +22,9 @@ import com.example.loomorecorder.loomoUtils.LoomoSensor
 import com.example.loomorecorder.loomoUtils.LoomoSensor.getAllSensors
 import com.opencsv.CSVWriter
 import com.segway.robot.algo.Pose2D
+import com.segway.robot.algo.tf.AlgoTfData
 import com.segway.robot.sdk.locomotion.sbv.Base
+import com.segway.robot.sdk.perception.sensor.Sensor
 import com.segway.robot.sdk.vision.frame.Frame
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
@@ -42,6 +44,7 @@ class MainActivity : AppCompatActivity() {
     private val colorDir = "color"
     private val depthDir = "depth"
     private lateinit var appPath: String
+
 
     private val csvLoopedThread = LoopedThread("csvSaving", Process.THREAD_PRIORITY_DEFAULT)
     private val fisheyeLoopedThread = LoopedThread("fisheyeSaving", Process.THREAD_PRIORITY_DEFAULT)
@@ -148,7 +151,8 @@ class MainActivity : AppCompatActivity() {
             if (recording) {
                 appendFrame(frame, fishEyeFile)
                 fishEyeTimeStamp = frame.info.imuTimeStamp
-            } else {
+            }
+            else {
                 runOnUiThread {
                     camViewFishEye.setImageBitmap(
                         frame.byteBuffer.toBitmap(
@@ -376,6 +380,7 @@ class MainActivity : AppCompatActivity() {
     private fun appendFrame(frame: Frame, file: File) {
         file.appendBytes(frame.info.imuTimeStamp.toByteArray())
         file.appendBytes(frame.byteBuffer.toByteArray())
+        frame.byteBuffer.rewind()
     }
 
     private fun saveTxt(txt: Array<String>, dir: String, name: String) {
